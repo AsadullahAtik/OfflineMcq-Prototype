@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="bn"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Offline MCQ Exam</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: single column phone app, sticky top bar, fixed bottom tabs, bottom sheets for forms. Motif: OMR answer bubbles. */
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#10182B; --muted:#5B6477; --line:#D8DEE9;
+  --accent:#2347C5; --accent-soft:#E2E8FB; --on-accent:#FFFFFF;
+  --good:#17784A; --good-soft:#DDF3E8; --bad:#C2362B; --bad-soft:#FBE4E1; --warn:#9A5B00; --warn-soft:#FBEBCF;
+  --font:'Hind Siliguri',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1220; --surface:#151C2F; --ink:#E9EDF7; --muted:#98A2B8; --line:#26304A;
+  --accent:#7C9BFF; --accent-soft:#1D2850; --on-accent:#0D1220;
+  --good:#4CC38A; --good-soft:#143427; --bad:#FF7A6E; --bad-soft:#3A1C1A; --warn:#F0B35A; --warn-soft:#38290F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1220; --surface:#151C2F; --ink:#E9EDF7; --muted:#98A2B8; --line:#26304A;
+  --accent:#7C9BFF; --accent-soft:#1D2850; --on-accent:#0D1220;
+  --good:#4CC38A; --good-soft:#143427; --bad:#FF7A6E; --bad-soft:#3A1C1A; --warn:#F0B35A; --warn-soft:#38290F; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;
+  padding-block:0 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+#app{max-width:560px;margin:0 auto}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:84px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 4px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 10px;border-bottom:1px solid var(--line)}
+.top h1{font-size:20px;line-height:1.2;margin:0;flex:1;min-width:0;font-weight:700;text-wrap:balance}
+.top .sub{font-size:12px;color:var(--muted);font-weight:500}
+.stack{display:flex;flex-direction:column;gap:12px;padding-top:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.row{display:flex;align-items:center;gap:10px;min-width:0}
+.row.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.h2{font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--muted);margin:8px 0 0;text-transform:uppercase}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600;min-height:42px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:5px 10px;min-height:34px;font-size:14px}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.chip{display:inline-block;font-size:12px;font-weight:600;border-radius:99px;padding:2px 10px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.chip.good{background:var(--good-soft);color:var(--good)}.chip.bad{background:var(--bad-soft);color:var(--bad)}.chip.warn{background:var(--warn-soft);color:var(--warn)}.chip.plain{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.kpi b{display:block;font-family:var(--mono);font-size:26px;line-height:1.2}
+.kpi span{font-size:13px;color:var(--muted)}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
+  display:flex;justify-content:center;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.nav-in{display:flex;width:100%;max-width:560px}
+.nav button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;color:var(--muted);font-size:12px;font-weight:600;border-radius:10px;min-width:0}
+.nav button.on{color:var(--accent)}
+.nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:19;border-radius:99px;padding:12px 18px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
+.opt+.opt{margin-top:8px}
+.bub{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;font-weight:600;flex:none;font-size:14px}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.sel .bub{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.opt.ok{border-color:var(--good);background:var(--good-soft)}.opt.ok .bub{background:var(--good);border-color:var(--good);color:var(--surface)}
+.opt.no{border-color:var(--bad);background:var(--bad-soft)}.opt.no .bub{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.qtext{font-size:18px;font-weight:600;margin:0 0 12px;text-wrap:pretty}
+.timer{font-family:var(--mono);font-size:18px;font-weight:500;padding:4px 10px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
+.timer.low{background:var(--bad-soft);color:var(--bad)}
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px}
+.pal button{height:38px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:13px;padding:0}
+.pal button.done{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.pal button.cur{border-width:3px;border-color:var(--ink)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.bar i.g{background:var(--good)}.bar i.r{background:var(--bad)}
+.rank{font-family:var(--mono);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:var(--bg);border:1px solid var(--line);flex:none}
+.rank.t1{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.me{outline:2px solid var(--accent)}
+.big{font-family:var(--mono);font-size:44px;line-height:1.1;font-weight:500}
+.ov{position:fixed;inset:0;z-index:40;background:rgba(8,12,24,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px max(16px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px));border:1px solid var(--line)}
+.sheet h3{margin:0 0 4px;font-size:19px}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;font-weight:600;z-index:60;max-width:90%;text-align:center}
+.login{max-width:420px;margin:0 auto;padding-top:48px}
+.login h1{font-size:30px;line-height:1.2;margin:0 0 4px}
+.chk{display:flex;gap:10px;align-items:center;margin-top:6px}.chk input{width:20px;height:20px;flex:none}
+.chk label{margin:0;color:var(--ink);font-size:15px;font-weight:500}
+pre.box{white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto;font-family:var(--mono);font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;margin:0}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .2s ease-out}@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}}
+</style>
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const KEY='offline_mcq_v1';
+const $=s=>document.querySelector(s);
+const h=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const LB=['ক','খ','গ','ঘ'];
+const IC={home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',q:'M4 6h16M4 12h16M4 18h10',exam:'M6 3h9l4 4v14H6zM9 12h7M9 16h7',chart:'M5 20V11M12 20V4M19 20v-6',more:'M5 12h.01M12 12h.01M19 12h.01',trophy:'M8 4h8v5a4 4 0 0 1-8 0zM6 5H3v2a3 3 0 0 0 3 3M18 5h3v2a3 3 0 0 1-3 3M12 13v4M8 21h8M10 17h4',user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0'};
+const icon=k=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${IC[k]}"/></svg>`;
+
+let db=null, mem=false;
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){mem=true}}
+function load(){try{const s=localStorage.getItem(KEY);if(s){const d=JSON.parse(s);if(d&&d.v===1)return d}}catch(e){mem=true}return null}
+
+/* ---------- lookups ---------- */
+const U=id=>db.users.find(x=>x.id===id), Q=id=>db.questions.find(x=>x.id===id), E=id=>db.exams.find(x=>x.id===id);
+const CL=id=>db.classes.find(x=>x.id===id), SU=id=>db.subjects.find(x=>x.id===id), CH=id=>db.chapters.find(x=>x.id===id);
+const me=()=>U(db.session);
+const subjLabel=id=>{const s=SU(id);return s?`${CL(s.classId)?.name||''} › ${s.name}`:'—'};
+const chapLabel=id=>{const c=CH(id);return c?`${subjLabel(c.subjectId)} › ${c.name}`:'—'};
+const fmtT=s=>{s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const fmtD=t=>new Date(t).toLocaleDateString('bn-BD',{day:'numeric',month:'short'});
+const num=n=>Math.round(n*100)/100;
+
+/* ---------- grading ---------- */
+function grade(exam,ans){let c=0,w=0,s=0;exam.qids.forEach(id=>{const q=Q(id);if(!q)return;const a=ans[id];if(a==null)s++;else if(a===q.ans)c++;else w++});return{correct:c,wrong:w,skipped:s,score:num(c-w*exam.neg)}}
+const subm=examId=>db.attempts.filter(a=>a.examId===examId&&a.submittedAt);
+function board(examId){return subm(examId).slice().sort((a,b)=>b.score-a.score||(a.submittedAt-a.startedAt)-(b.submittedAt-b.startedAt))}
+function finalize(att){const ex=E(att.examId);const end=att.startedAt+ex.duration*60000;att.submittedAt=Math.min(Date.now(),end);Object.assign(att,grade(ex,att.answers))}
+function sweep(){let ch=false;db.attempts.forEach(a=>{if(a.submittedAt)return;const ex=E(a.examId);if(!ex||ex.status==='ended'||Date.now()>=a.startedAt+ex.duration*60000){if(ex)finalize(a);else a.submittedAt=Date.now();ch=true}});if(ch)persist()}
+
+/* ---------- demo data ---------- */
+function seed(){
+  const d={v:1,session:null,users:[],classes:[{id:'c9',name:'নবম শ্রেণি'},{id:'c10',name:'দশম শ্রেণি'}],subjects:[],chapters:[],questions:[],exams:[],attempts:[]};
+  [['s_phy','c9','পদার্থবিজ্ঞান'],['s_mat','c9','গণিত'],['s_ict','c10','ICT']].forEach(([id,classId,name])=>d.subjects.push({id,classId,name}));
+  [['ch_mot','s_phy','গতি'],['ch_frc','s_phy','বল ও নিউটনের সূত্র'],['ch_alg','s_mat','বীজগণিত'],['ch_geo','s_mat','জ্যামিতি'],['ch_ict1','s_ict','কম্পিউটার পরিচিতি'],['ch_net','s_ict','ইন্টারনেট ও ওয়েব']].forEach(([id,subjectId,name])=>d.chapters.push({id,subjectId,name}));
+  const Qs=[
+   ['ch_mot','বেগের SI একক কোনটি?',['m','m/s','m/s²','kg'],1],
+   ['ch_mot','ত্বরণের SI একক কোনটি?',['m/s','m/s²','N','J'],1],
+   ['ch_mot','স্থির অবস্থা থেকে 5 m/s² ত্বরণে 4 s পর বেগ কত?',['10 m/s','15 m/s','20 m/s','25 m/s'],2],
+   ['ch_mot','সমবেগে চলমান বস্তুর ত্বরণ কত?',['শূন্য','ধ্রুব','ঋণাত্মক','অসীম'],0],
+   ['ch_frc','বলের SI একক কোনটি?',['জুল','নিউটন','ওয়াট','প্যাসকেল'],1],
+   ['ch_frc','নিউটনের প্রথম সূত্র কোন ধর্মের কথা বলে?',['ঘর্ষণ','জড়তা','ওজন','ঘনত্ব'],1],
+   ['ch_frc','2 kg ভরের বস্তুতে 3 m/s² ত্বরণ সৃষ্টি করতে কত বল লাগে?',['5 N','6 N','1.5 N','9 N'],1],
+   ['ch_frc','ক্রিয়া ও প্রতিক্রিয়া বল পরস্পর কেমন?',['সমান ও বিপরীতমুখী','সমান ও একমুখী','অসমান ও বিপরীতমুখী','অসমান ও একমুখী'],0],
+   ['ch_alg','(a+b)² এর বিস্তৃত রূপ কোনটি?',['a²+2ab+b²','a²+b²','a²−2ab+b²','2a+2b'],0],
+   ['ch_alg','x + 5 = 12 হলে x এর মান কত?',['5','6','7','17'],2],
+   ['ch_alg','a² − b² এর উৎপাদক কোনটি?',['(a−b)²','(a+b)(a−b)','(a+b)²','a²+b²'],1],
+   ['ch_alg','3x = 21 হলে x = কত?',['6','7','8','9'],1],
+   ['ch_geo','ত্রিভুজের তিন কোণের সমষ্টি কত?',['90°','180°','270°','360°'],1],
+   ['ch_geo','বৃত্তের ব্যাস ব্যাসার্ধের কত গুণ?',['১ গুণ','২ গুণ','৩ গুণ','৪ গুণ'],1],
+   ['ch_geo','সমকোণী ত্রিভুজে অতিভুজের বর্গ কীসের সমান?',['অপর দুই বাহুর বর্গের সমষ্টি','অপর দুই বাহুর গুণফল','অপর দুই বাহুর সমষ্টি','একটি বাহুর দ্বিগুণ'],0],
+   ['ch_geo','বর্গের প্রতিটি কোণ কত ডিগ্রি?',['45°','60°','90°','120°'],2],
+   ['ch_ict1','CPU এর পূর্ণরূপ কোনটি?',['Central Processing Unit','Computer Personal Unit','Central Program Utility','Control Processing Unit'],0],
+   ['ch_ict1','১ বাইট = কত বিট?',['4','8','16','32'],1],
+   ['ch_ict1','RAM কোন ধরনের মেমোরি?',['স্থায়ী','অস্থায়ী','শুধু পঠনযোগ্য','ক্লাউড'],1],
+   ['ch_ict1','১ কিলোবাইট (KB) = কত বাইট?',['100','1000','1024','2048'],2],
+   ['ch_net','WWW এর পূর্ণরূপ কোনটি?',['World Wide Web','World Web Wide','Wide World Web','Web World Wide'],0],
+   ['ch_net','কোনটি একটি ওয়েব ব্রাউজার?',['Windows','Chrome','Excel','Linux'],1],
+   ['ch_net','HTML কী?',['ডাটাবেস','মার্কআপ ভাষা','অপারেটিং সিস্টেম','কম্পাইলার'],1],
+   ['ch_net','IP এর পূর্ণরূপ কোনটি?',['Internet Protocol','Internal Program','Input Process','Island Port'],0]
+  ];
+  Qs.forEach((r,i)=>d.questions.push({id:'q'+(i+1),chapterId:r[0],text:r[1],opts:r[2],ans:r[3]}));
+  d.users.push({id:'u_admin',name:'অ্যাডমিন',role:'admin',pin:'1234'},{id:'u_t1',name:'রহমান স্যার',role:'teacher',pin:'1234'});
+  [['আরিফ','c9'],['নুসরাত','c9'],['সাকিব','c9'],['মিম','c9'],['রাফি','c10'],['তানিয়া','c10']].forEach((r,i)=>d.users.push({id:'u_s'+(i+1),name:r[0],role:'student',classId:r[1],pin:'1234'}));
+  const qs=sid=>d.chapters.filter(c=>c.subjectId===sid).flatMap(c=>d.questions.filter(q=>q.chapterId===c.id).map(q=>q.id));
+  const now=Date.now();
+  d.exams.push(
+   {id:'e1',title:'পদার্থবিজ্ঞান মডেল টেস্ট ১',classId:'c9',subjectId:'s_phy',qids:qs('s_phy'),duration:10,neg:0.25,status:'ended',createdAt:now-4*864e5},
+   {id:'e2',title:'গণিত সাপ্তাহিক পরীক্ষা',classId:'c9',subjectId:'s_mat',qids:qs('s_mat'),duration:10,neg:0.25,status:'live',createdAt:now-864e5},
+   {id:'e3',title:'ICT ইউনিট টেস্ট',classId:'c10',subjectId:'s_ict',qids:qs('s_ict'),duration:8,neg:0,status:'live',createdAt:now-36e5}
+  );
+  db=d;
+  let sv=7;const rnd=()=>(sv=(sv*9301+49297)%233280)/233280;
+  const ex=d.exams[0];
+  [0.92,0.75,0.55,0.38].forEach((acc,i)=>{
+    const ans={};ex.qids.forEach(id=>{const q=Q(id),r=rnd();if(r<acc)ans[id]=q.ans;else if(r<acc+0.45*(1-acc))ans[id]=(q.ans+1+Math.floor(rnd()*3))%4});
+    const st=now-4*864e5+i*6e4;
+    const a={id:'a'+i,examId:'e1',studentId:'u_s'+(i+1),answers:ans,startedAt:st,submittedAt:st+(280+Math.floor(rnd()*300))*1000};
+    Object.assign(a,grade(ex,ans));d.attempts.push(a);
+  });
+  return d;
+}
+
+/* ---------- ui state ---------- */
+let ui={view:'login',sheet:null,qf:'',resExam:'',lbExam:'',cur:0,rid:null,tab:null,loginUid:''};
+let timerId=null;
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2200)}
+const isStaff=()=>{const u=me();return u&&u.role!=='student'};
+const isAdmin=()=>me()&&me().role==='admin';
+
+function go(view,extra){ui.view=view;ui.sheet=null;if(extra)Object.assign(ui,extra);render();window.scrollTo(0,0)}
+
+/* ---------- shell ---------- */
+function topbar(title,sub,right){return `<div class="top"><div class="grow"><h1>${h(title)}</h1>${sub?`<div class="sub">${h(sub)}</div>`:''}</div>${right||''}</div>`}
+function navBar(items){return `<nav class="nav"><div class="nav-in">${items.map(([v,l,i])=>`<button class="${ui.view===v?'on':''}" data-act="go" data-v="${v}">${icon(i)}<span>${l}</span></button>`).join('')}</div></nav>`}
+const staffNav=()=>navBar([['home','হোম','home'],['questions','প্রশ্ন','q'],['exams','পরীক্ষা','exam'],['results','ফলাফল','chart'],['more','আরও','more']]);
+const stuNav=()=>navBar([['exams','পরীক্ষা','exam'],['board','লিডারবোর্ড','trophy'],['me','প্রোফাইল','user']]);
+
+function render(){
+  sweep();
+  const app=$('#app');
+  clearInterval(timerId);
+  let html='';
+  if(!db.session||!me()){ui.view='login';html=vLogin()}
+  else if(ui.view==='run')html=vRun();
+  else if(isStaff()){html=({home:vHome,questions:vQuestions,exams:vExams,results:vResults,more:vMore,structure:vStructure,users:vUsers,backup:vBackup}[ui.view]||vHome)()+staffNav()}
+  else{html=({exams:vStuExams,board:vBoard,me:vMe,result:vResult}[ui.view]||vStuExams)()+(ui.view==='result'?stuNav():stuNav())}
+  app.innerHTML=html+(ui.sheet?vSheet():'');
+  if(ui.view==='run'){timerId=setInterval(tick,1000);tick()}
+}
+
+/* ---------- login ---------- */
+function vLogin(){
+  const us=db.users;
+  return `<div class="login"><div class="chip">অফলাইন • এই ফোনেই চলে</div>
+  <h1 style="margin-top:12px">MCQ পরীক্ষা</h1>
+  <p class="muted" style="margin:0 0 20px">সার্ভার ছাড়াই ফোনের লোকাল স্টোরেজে চলে। নাম বেছে PIN দিন।</p>
+  <div class="card"><label for="lu" style="margin-top:0">ব্যবহারকারী</label>
+  <select id="lu">${['admin','teacher','student'].map(r=>`<optgroup label="${{admin:'অ্যাডমিন',teacher:'শিক্ষক',student:'শিক্ষার্থী'}[r]}">${us.filter(u=>u.role===r).map(u=>`<option value="${u.id}" ${ui.loginUid===u.id?'selected':''}>${h(u.name)}${u.classId?' — '+h(CL(u.classId)?.name||''):''}</option>`).join('')}</optgroup>`).join('')}</select>
+  <label for="lp">PIN</label><input id="lp" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="ডেমো PIN: 1234">
+  <button class="btn primary block" style="margin-top:16px" data-act="login">ঢুকুন</button></div>
+  ${mem?'<p class="small muted">এই ব্রাউজারে স্টোরেজ বন্ধ, তাই ডাটা পেজ বন্ধ করলে মুছে যাবে।</p>':''}</div>`;
+}
+
+/* ---------- staff: home ---------- */
+function vHome(){
+  const live=db.exams.filter(e=>e.status==='live');
+  const recent=db.attempts.filter(a=>a.submittedAt).sort((a,b)=>b.submittedAt-a.submittedAt).slice(0,5);
+  return topbar('হোম',`স্বাগতম, ${me().name}`)+`<div class="stack">
+  <div class="kpis"><div class="kpi"><b>${db.users.filter(u=>u.role==='student').length}</b><span>শিক্ষার্থী</span></div>
+  <div class="kpi"><b>${db.questions.length}</b><span>প্রশ্ন</span></div>
+  <div class="kpi"><b>${db.exams.length}</b><span>পরীক্ষা</span></div>
+  <div class="kpi"><b>${db.attempts.filter(a=>a.submittedAt).length}</b><span>জমা পড়া উত্তরপত্র</span></div></div>
+  <div class="h2">লাইভ পরীক্ষা</div>
+  ${live.length?live.map(e=>`<div class="card row"><div class="grow"><b>${h(e.title)}</b><div class="small muted">${h(subjLabel(e.subjectId))} • ${e.duration} মিনিট</div></div><span class="chip good">${subm(e.id).length} জমা</span></div>`).join(''):'<div class="card muted">এখন কোনো পরীক্ষা লাইভ নেই। “পরীক্ষা” ট্যাব থেকে চালু করুন।</div>'}
+  <div class="h2">সাম্প্রতিক জমা</div>
+  ${recent.length?recent.map(a=>{const e=E(a.examId);return `<div class="card row"><div class="grow"><b>${h(U(a.studentId)?.name||'—')}</b><div class="small muted">${h(e?.title||'')}</div></div><span class="chip">${a.score}/${e?.qids.length||0}</span></div>`}).join(''):'<div class="card muted">এখনও কেউ জমা দেয়নি।</div>'}
+  </div>`;
+}
+
+/* ---------- staff: questions ---------- */
+function vQuestions(){
+  const list=db.questions.filter(q=>!ui.qf||CH(q.chapterId)?.subjectId===ui.qf);
+  return topbar('প্রশ্নব্যাংক',`${list.length}টি প্রশ্ন`)+`<div class="stack">
+  <select id="qf" data-chg="qf" aria-label="বিষয় ফিল্টার"><option value="">সব বিষয়</option>${db.subjects.map(s=>`<option value="${s.id}" ${ui.qf===s.id?'selected':''}>${h(subjLabel(s.id))}</option>`).join('')}</select>
+  ${list.length?list.slice(0,60).map(q=>`<div class="card"><div class="row" style="align-items:flex-start"><div class="grow"><b>${h(q.text)}</b></div></div>
+   <div class="small muted" style="margin:4px 0 8px">${h(chapLabel(q.chapterId))}</div>
+   ${q.opts.map((o,i)=>`<div class="small" style="padding:2px 0;${i===q.ans?'color:var(--good);font-weight:600':''}">${LB[i]}. ${h(o)}${i===q.ans?' ✓':''}</div>`).join('')}
+   <div class="row" style="margin-top:10px;justify-content:flex-end"><button class="btn sm" data-act="editQ" data-id="${q.id}">সম্পাদনা</button><button class="btn sm danger" data-act="askDelQ" data-id="${q.id}">মুছুন</button></div></div>`).join(''):'<div class="card muted">এই বিষয়ে কোনো প্রশ্ন নেই।</div>'}
+  </div><button class="btn primary fab" data-act="newQ">+ প্রশ্ন</button>`;
+}
+
+/* ---------- staff: exams ---------- */
+const stChip=s=>s==='live'?'<span class="chip good">লাইভ</span>':s==='ended'?'<span class="chip plain">শেষ</span>':'<span class="chip warn">ড্রাফট</span>';
+function vExams(){
+  const L=db.exams.slice().sort((a,b)=>b.createdAt-a.createdAt);
+  return topbar('পরীক্ষা',`${L.length}টি`)+`<div class="stack">
+  ${L.length?L.map(e=>`<div class="card"><div class="row"><div class="grow"><b>${h(e.title)}</b><div class="small muted">${h(subjLabel(e.subjectId))}</div></div>${stChip(e.status)}</div>
+  <div class="row wrap small muted" style="margin:8px 0"><span>${e.qids.length} প্রশ্ন</span><span>•</span><span>${e.duration} মিনিট</span><span>•</span><span>${e.neg?`ভুলে −${e.neg}`:'নেগেটিভ নেই'}</span><span>•</span><span>${subm(e.id).length} জমা</span></div>
+  <div class="row wrap">${e.status==='draft'?`<button class="btn sm primary" data-act="setSt" data-id="${e.id}" data-s="live">লাইভ করুন</button>`:''}${e.status==='live'?`<button class="btn sm" data-act="askEnd" data-id="${e.id}">পরীক্ষা শেষ করুন</button>`:''}<button class="btn sm" data-act="viewRes" data-id="${e.id}">ফলাফল</button><button class="btn sm danger" data-act="askDelE" data-id="${e.id}">মুছুন</button></div></div>`).join(''):'<div class="card muted">কোনো পরীক্ষা নেই। নিচের বাটনে নতুন পরীক্ষা বানান।</div>'}
+  </div><button class="btn primary fab" data-act="newE">+ নতুন পরীক্ষা</button>`;
+}
+
+/* ---------- staff: results ---------- */
+function vResults(){
+  const exs=db.exams.filter(e=>e.status!=='draft').sort((a,b)=>b.createdAt-a.createdAt);
+  if(!exs.length)return topbar('ফলাফল')+'<div class="stack"><div class="card muted">ফলাফল দেখতে একটি পরীক্ষা চালু করুন।</div></div>';
+  const ex=E(ui.resExam)||exs[0];ui.resExam=ex.id;
+  const B=board(ex.id),n=B.length;
+  const avg=n?num(B.reduce((s,a)=>s+a.score,0)/n):0, hi=n?B[0].score:0;
+  const classN=db.users.filter(u=>u.role==='student'&&u.classId===ex.classId).length;
+  return topbar('ফলাফল')+`<div class="stack">
+  <select id="rx" data-chg="resExam" aria-label="পরীক্ষা">${exs.map(e=>`<option value="${e.id}" ${e.id===ex.id?'selected':''}>${h(e.title)}</option>`).join('')}</select>
+  <div class="kpis"><div class="kpi"><b>${n}/${classN}</b><span>অংশগ্রহণ</span></div><div class="kpi"><b>${avg}</b><span>গড় (পূর্ণমান ${ex.qids.length})</span></div><div class="kpi"><b>${hi}</b><span>সর্বোচ্চ</span></div><div class="kpi"><b>${n?Math.round(B.filter(a=>a.score>=ex.qids.length*0.4).length/n*100):0}%</b><span>পাসের হার (৪০%)</span></div></div>
+  <div class="h2">মেধাতালিকা</div>
+  ${n?B.map((a,i)=>rowRank(a,i,ex)).join(''):'<div class="card muted">এখনও কেউ জমা দেয়নি।</div>'}
+  <div class="h2">প্রশ্নভিত্তিক বিশ্লেষণ</div>
+  ${ex.qids.map((id,i)=>{const q=Q(id);if(!q)return '';const ok=n?B.filter(a=>a.answers[id]===q.ans).length:0,p=n?Math.round(ok/n*100):0;return `<div class="card"><div class="row"><div class="grow small"><b>${i+1}.</b> ${h(q.text)}</div><span class="chip ${p>=60?'good':p>=35?'warn':'bad'}">${p}%</span></div><div class="bar" style="margin-top:8px"><i class="${p>=60?'g':p<35?'r':''}" style="width:${p}%"></i></div></div>`}).join('')}
+  </div>`;
+}
+function rowRank(a,i,ex,mine){const u=U(a.studentId);const t=Math.round((a.submittedAt-a.startedAt)/1000);
+  return `<div class="card row ${mine?'me':''}"><span class="rank ${i===0?'t1':''}">${i+1}</span><div class="grow"><b>${h(u?.name||'—')}</b><div class="small muted">সঠিক ${a.correct} • ভুল ${a.wrong} • বাদ ${a.skipped} • ${fmtT(t)}</div></div><b style="font-family:var(--mono)">${a.score}</b></div>`}
+
+/* ---------- staff: more / structure / users / backup ---------- */
+function vMore(){
+  const it=(v,t,s)=>`<button class="card row" style="width:100%;text-align:left" data-act="go" data-v="${v}"><div class="grow"><b>${t}</b><div class="small muted">${s}</div></div><span class="muted">›</span></button>`;
+  return topbar('আরও',`${me().name} • ${me().role==='admin'?'অ্যাডমিন':'শিক্ষক'}`)+`<div class="stack">
+  ${isAdmin()?it('structure','শ্রেণি, বিষয় ও অধ্যায়','কাঠামো সাজান')+it('users','ব্যবহারকারী','শিক্ষক ও শিক্ষার্থী যোগ করুন'):''}
+  ${it('backup','ব্যাকআপ ও রিসেট','ডাটা কপি করুন বা ফিরিয়ে আনুন')}
+  <button class="btn block" data-act="logout">লগ আউট</button></div>`;
+}
+function vStructure(){
+  return topbar('কাঠামো','শ্রেণি › বিষয় › অধ্যায়',`<button class="btn sm" data-act="go" data-v="more">← পেছনে</button>`)+`<div class="stack">
+  ${db.classes.map(c=>`<div class="card"><div class="row"><b class="grow">${h(c.name)}</b><button class="btn sm" data-act="addS" data-p="${c.id}">+ বিষয়</button><button class="btn sm danger" data-act="delS" data-k="class" data-id="${c.id}">মুছুন</button></div>
+  ${db.subjects.filter(s=>s.classId===c.id).map(s=>`<div style="margin:12px 0 0 10px;padding-left:10px;border-left:2px solid var(--line)"><div class="row"><span class="grow">${h(s.name)}</span><button class="btn sm" data-act="addS" data-k="chapter" data-p="${s.id}">+ অধ্যায়</button><button class="btn sm danger" data-act="delS" data-k="subject" data-id="${s.id}">×</button></div>
+  ${db.chapters.filter(x=>x.subjectId===s.id).map(x=>`<div class="row small muted" style="margin:6px 0 0 8px"><span class="grow">${h(x.name)} (${db.questions.filter(q=>q.chapterId===x.id).length})</span><button class="btn sm danger" data-act="delS" data-k="chapter" data-id="${x.id}">×</button></div>`).join('')}</div>`).join('')}</div>`).join('')}
+  </div><button class="btn primary fab" data-act="addS" data-k="class">+ শ্রেণি</button>`;
+}
+function vUsers(){
+  const grp=[['teacher','শিক্ষক'],['student','শিক্ষার্থী']];
+  return topbar('ব্যবহারকারী','',`<button class="btn sm" data-act="go" data-v="more">← পেছনে</button>`)+`<div class="stack">
+  ${grp.map(([r,l])=>`<div class="h2">${l}</div>${db.users.filter(u=>u.role===r).map(u=>`<div class="card row"><div class="grow"><b>${h(u.name)}</b><div class="small muted">${u.classId?h(CL(u.classId)?.name||''):'শিক্ষক'} • PIN ${h(u.pin)}</div></div><button class="btn sm danger" data-act="askDelU" data-id="${u.id}">মুছুন</button></div>`).join('')||'<div class="card muted">কেউ নেই</div>'}`).join('')}
+  </div><button class="btn primary fab" data-act="newU">+ যোগ করুন</button>`;
+}
+function vBackup(){
+  const json=JSON.stringify(db);
+  return topbar('ব্যাকআপ','',`<button class="btn sm" data-act="go" data-v="more">← পেছনে</button>`)+`<div class="stack">
+  <div class="card"><b>ডাটা কপি করুন</b><p class="small muted" style="margin:4px 0 10px">পুরো ডাটা একটি টেক্সট হিসেবে কপি হবে। নোটস বা মেসেজে রেখে দিন।</p><pre class="box" id="bk">${h(json)}</pre><button class="btn block" style="margin-top:10px" data-act="copyBk">কপি করুন</button></div>
+  <div class="card"><b>ফিরিয়ে আনুন</b><p class="small muted" style="margin:4px 0 0">আগের কপি করা টেক্সট এখানে বসান।</p><textarea id="imp" placeholder="ব্যাকআপ টেক্সট"></textarea><button class="btn block" style="margin-top:10px" data-act="imp">ইমপোর্ট</button></div>
+  <div class="card"><b>ডেমো ডাটায় রিসেট</b><p class="small muted" style="margin:4px 0 10px">সব ডাটা মুছে নমুনা ডাটা ফিরে আসবে।</p><button class="btn danger block" data-act="askReset">রিসেট করুন</button></div></div>`;
+}
+
+/* ---------- student ---------- */
+const myAtt=eid=>db.attempts.find(a=>a.examId===eid&&a.studentId===db.session);
+function vStuExams(){
+  const u=me();const ex=db.exams.filter(e=>e.classId===u.classId&&e.status!=='draft').sort((a,b)=>b.createdAt-a.createdAt);
+  const live=ex.filter(e=>e.status==='live'&&!(myAtt(e.id)?.submittedAt));
+  const done=ex.filter(e=>myAtt(e.id)?.submittedAt);
+  const missed=ex.filter(e=>e.status==='ended'&&!myAtt(e.id));
+  return topbar('পরীক্ষা',`${u.name} • ${CL(u.classId)?.name||''}`)+`<div class="stack">
+  <div class="h2">চলমান পরীক্ষা</div>
+  ${live.length?live.map(e=>{const a=myAtt(e.id);return `<div class="card"><b>${h(e.title)}</b><div class="small muted">${h(SU(e.subjectId)?.name||'')} • ${e.qids.length} প্রশ্ন • ${e.duration} মিনিট • ${e.neg?`ভুলে −${e.neg}`:'নেগেটিভ নেই'}</div><button class="btn primary block" style="margin-top:10px" data-act="${a?'resume':'start'}" data-id="${e.id}">${a?'চালিয়ে যান':'শুরু করুন'}</button></div>`}).join(''):'<div class="card muted">এখন কোনো লাইভ পরীক্ষা নেই।</div>'}
+  <div class="h2">দেওয়া পরীক্ষা</div>
+  ${done.length?done.map(e=>{const a=myAtt(e.id);return `<button class="card row" style="width:100%;text-align:left" data-act="openRes" data-id="${a.id}"><div class="grow"><b>${h(e.title)}</b><div class="small muted">${fmtD(a.submittedAt)}</div></div><span class="chip">${a.score}/${e.qids.length}</span></button>`}).join(''):'<div class="card muted">এখনও কোনো পরীক্ষা দেননি।</div>'}
+  ${missed.length?`<div class="h2">অংশ নেননি</div>${missed.map(e=>`<div class="card row"><div class="grow"><b>${h(e.title)}</b></div><span class="chip plain">শেষ</span></div>`).join('')}`:''}
+  </div>`;
+}
+function vBoard(){
+  const u=me();const exs=db.exams.filter(e=>e.classId===u.classId&&e.status!=='draft').sort((a,b)=>b.createdAt-a.createdAt);
+  if(!exs.length)return topbar('লিডারবোর্ড')+'<div class="stack"><div class="card muted">এখনও কোনো পরীক্ষা নেই।</div></div>';
+  const ex=E(ui.lbExam)&&exs.includes(E(ui.lbExam))?E(ui.lbExam):exs[0];ui.lbExam=ex.id;
+  const B=board(ex.id);
+  return topbar('লিডারবোর্ড')+`<div class="stack"><select id="lx" data-chg="lbExam" aria-label="পরীক্ষা">${exs.map(e=>`<option value="${e.id}" ${e.id===ex.id?'selected':''}>${h(e.title)}</option>`).join('')}</select>
+  ${B.length?B.map((a,i)=>rowRank(a,i,ex,a.studentId===u.id)).join(''):'<div class="card muted">এখনও কেউ জমা দেয়নি।</div>'}</div>`;
+}
+function vMe(){
+  const u=me(),A=db.attempts.filter(a=>a.studentId===u.id&&a.submittedAt);
+  const tot=A.reduce((s,a)=>s+a.correct+a.wrong+a.skipped,0),ok=A.reduce((s,a)=>s+a.correct,0);
+  return topbar('প্রোফাইল')+`<div class="stack"><div class="card"><b style="font-size:20px">${h(u.name)}</b><div class="muted">${h(CL(u.classId)?.name||'')}</div></div>
+  <div class="kpis"><div class="kpi"><b>${A.length}</b><span>পরীক্ষা দেওয়া</span></div><div class="kpi"><b>${tot?Math.round(ok/tot*100):0}%</b><span>সঠিক উত্তরের হার</span></div></div>
+  <button class="btn block" data-act="logout">লগ আউট</button></div>`;
+}
+function vResult(){
+  const a=db.attempts.find(x=>x.id===ui.rid);if(!a)return vStuExams();
+  const ex=E(a.examId),B=board(ex.id),rk=B.findIndex(x=>x.id===a.id)+1;
+  return topbar('ফলাফল',ex.title,`<button class="btn sm" data-act="go" data-v="exams">← পরীক্ষা</button>`)+`<div class="stack">
+  <div class="card" style="text-align:center"><div class="muted small">আপনার প্রাপ্ত নম্বর</div><div class="big">${a.score}<span class="muted" style="font-size:22px"> / ${ex.qids.length}</span></div>
+  <div class="row wrap" style="justify-content:center;margin-top:10px"><span class="chip good">সঠিক ${a.correct}</span><span class="chip bad">ভুল ${a.wrong}</span><span class="chip plain">বাদ ${a.skipped}</span><span class="chip">র‍্যাংক ${rk}/${B.length}</span></div>
+  ${ex.neg&&a.wrong?`<div class="small muted" style="margin-top:8px">প্রতিটি ভুলে −${ex.neg} নম্বর কাটা হয়েছে</div>`:''}</div>
+  <div class="h2">উত্তর পর্যালোচনা</div>
+  ${ex.qids.map((id,i)=>{const q=Q(id);if(!q)return '';const s=a.answers[id];return `<div class="card"><p class="qtext" style="font-size:16px"><span class="muted">${i+1}.</span> ${h(q.text)}</p>${q.opts.map((o,j)=>`<div class="opt ${j===q.ans?'ok':j===s?'no':''}" style="cursor:default"><span class="bub">${LB[j]}</span><span>${h(o)}</span></div>`).join('')}${s==null?'<div class="small muted" style="margin-top:8px">আপনি উত্তর দেননি</div>':''}</div>`}).join('')}</div>`;
+}
+
+/* ---------- exam run ---------- */
+function curAtt(){return db.attempts.find(a=>a.id===ui.rid)}
+function vRun(){
+  const a=curAtt();if(!a||a.submittedAt){ui.view='exams';return vStuExams()+stuNav()}
+  const ex=E(a.examId),qs=ex.qids.filter(id=>Q(id));
+  ui.cur=Math.min(ui.cur,qs.length-1);
+  const q=Q(qs[ui.cur]),sel=a.answers[q.id];
+  const answered=qs.filter(id=>a.answers[id]!=null).length;
+  return `<div class="top"><div class="grow"><h1 style="font-size:17px">${h(ex.title)}</h1><div class="sub">${answered}/${qs.length} উত্তর দেওয়া হয়েছে</div></div><span class="timer" id="tm">--:--</span></div>
+  <div class="stack"><div class="card"><div class="small muted" style="margin-bottom:6px">প্রশ্ন ${ui.cur+1} / ${qs.length}</div><p class="qtext">${h(q.text)}</p>
+  ${q.opts.map((o,j)=>`<button class="opt ${sel===j?'sel':''}" data-act="pick" data-j="${j}" aria-pressed="${sel===j}"><span class="bub">${LB[j]}</span><span>${h(o)}</span></button>`).join('')}
+  ${sel!=null?`<button class="btn sm" style="margin-top:10px" data-act="clr">উত্তর মুছুন</button>`:''}</div>
+  <div class="row"><button class="btn grow" data-act="prev" ${ui.cur===0?'disabled':''}>← আগে</button><button class="btn grow" data-act="next" ${ui.cur===qs.length-1?'disabled':''}>পরে →</button></div>
+  <div class="card"><div class="small muted" style="margin-bottom:8px">প্রশ্ন নেভিগেটর</div><div class="pal">${qs.map((id,i)=>`<button class="${a.answers[id]!=null?'done':''} ${i===ui.cur?'cur':''}" data-act="jump" data-i="${i}" aria-label="প্রশ্ন ${i+1}">${i+1}</button>`).join('')}</div></div>
+  <button class="btn primary block" data-act="askSubmit">জমা দিন</button></div>`;
+}
+function tick(){
+  const a=curAtt();if(!a||a.submittedAt)return;const ex=E(a.examId);
+  const rem=(a.startedAt+ex.duration*60000-Date.now())/1000;
+  if(rem<=0||ex.status==='ended'){finalize(a);persist();ui.rid=a.id;toast('সময় শেষ, উত্তরপত্র জমা হয়েছে');go('result');return}
+  const t=$('#tm');if(t){t.textContent=fmtT(rem);t.classList.toggle('low',rem<60)}
+}
+
+/* ---------- sheets ---------- */
+function vSheet(){
+  const s=ui.sheet;let body='';
+  if(s.t==='confirm'){body=`<h3>${h(s.title)}</h3><p class="muted">${h(s.msg)}</p><div class="row" style="margin-top:12px"><button class="btn grow" data-act="close">বাতিল</button><button class="btn grow ${s.danger?'danger':'primary'}" data-act="${s.yes}" data-id="${h(s.id||'')}">${h(s.label||'নিশ্চিত')}</button></div>`}
+  if(s.t==='q'){const q=s.q||{text:'',opts:['','','',''],ans:0,chapterId:db.chapters[0]?.id};
+    body=`<h3>${s.q?'প্রশ্ন সম্পাদনা':'নতুন প্রশ্ন'}</h3>
+    <label for="f_ch">অধ্যায়</label><select id="f_ch">${db.chapters.map(c=>`<option value="${c.id}" ${c.id===q.chapterId?'selected':''}>${h(chapLabel(c.id))}</option>`).join('')}</select>
+    <label for="f_tx">প্রশ্ন</label><textarea id="f_tx">${h(q.text)}</textarea>
+    ${[0,1,2,3].map(i=>`<label for="f_o${i}">অপশন ${LB[i]}</label><input id="f_o${i}" value="${h(q.opts[i])}">`).join('')}
+    <label for="f_an">সঠিক উত্তর</label><select id="f_an">${LB.map((l,i)=>`<option value="${i}" ${q.ans===i?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="row" style="margin-top:16px"><button class="btn grow" data-act="close">বাতিল</button><button class="btn primary grow" data-act="saveQ" data-id="${q.id||''}">সংরক্ষণ</button></div>`}
+  if(s.t==='exam'){const d=s.d;const chs=db.chapters.filter(c=>c.subjectId===d.subjectId);const avail=db.questions.filter(q=>d.chapterIds.includes(q.chapterId)).length;
+    body=`<h3>নতুন পরীক্ষা</h3>
+    <label for="f_ti">শিরোনাম</label><input id="f_ti" value="${h(d.title)}" placeholder="যেমন: গণিত মডেল টেস্ট ২">
+    <label for="f_su">বিষয়</label><select id="f_su" data-chg="exSubj">${db.subjects.map(x=>`<option value="${x.id}" ${x.id===d.subjectId?'selected':''}>${h(subjLabel(x.id))}</option>`).join('')}</select>
+    <label>অধ্যায় (যেগুলো থেকে প্রশ্ন আসবে)</label>${chs.map(c=>`<div class="chk"><input type="checkbox" id="c_${c.id}" data-chg="exCh" ${d.chapterIds.includes(c.id)?'checked':''}><label for="c_${c.id}">${h(c.name)} (${db.questions.filter(q=>q.chapterId===c.id).length})</label></div>`).join('')||'<div class="small muted">এই বিষয়ে অধ্যায় নেই</div>'}
+    <div class="small muted" style="margin-top:6px">বাছাই করা অধ্যায়ে মোট ${avail}টি প্রশ্ন আছে</div>
+    <div class="row" style="align-items:flex-start"><div class="grow"><label for="f_n">প্রশ্নসংখ্যা</label><input id="f_n" type="number" min="1" value="${d.count}"></div><div class="grow"><label for="f_du">সময় (মিনিট)</label><input id="f_du" type="number" min="1" value="${d.duration}"></div></div>
+    <label for="f_ng">ভুল উত্তরে নম্বর কাটা</label><select id="f_ng">${[0,0.25,0.5].map(v=>`<option value="${v}" ${d.neg===v?'selected':''}>${v===0?'কাটা হবে না':'−'+v}</option>`).join('')}</select>
+    <div class="chk"><input type="checkbox" id="f_lv" ${d.live?'checked':''}><label for="f_lv">সাথে সাথে লাইভ করুন</label></div>
+    <div class="row" style="margin-top:16px"><button class="btn grow" data-act="close">বাতিল</button><button class="btn primary grow" data-act="saveE">তৈরি করুন</button></div>`}
+  if(s.t==='struct'){const lab={class:'নতুন শ্রেণি',subject:'নতুন বিষয়',chapter:'নতুন অধ্যায়'}[s.k];
+    body=`<h3>${lab}</h3><label for="f_nm">নাম</label><input id="f_nm" autocomplete="off"><div class="row" style="margin-top:16px"><button class="btn grow" data-act="close">বাতিল</button><button class="btn primary grow" data-act="saveS" data-k="${s.k}" data-p="${s.p||''}">যোগ করুন</button></div>`}
+  if(s.t==='user'){body=`<h3>নতুন ব্যবহারকারী</h3><label for="f_un">নাম</label><input id="f_un" autocomplete="off">
+    <label for="f_ur">ভূমিকা</label><select id="f_ur" data-chg="uRole"><option value="student" ${s.role==='student'?'selected':''}>শিক্ষার্থী</option><option value="teacher" ${s.role==='teacher'?'selected':''}>শিক্ষক</option></select>
+    ${s.role==='student'?`<label for="f_uc">শ্রেণি</label><select id="f_uc">${db.classes.map(c=>`<option value="${c.id}">${h(c.name)}</option>`).join('')}</select>`:''}
+    <label for="f_up">PIN (৪ সংখ্যা)</label><input id="f_up" inputmode="numeric" maxlength="8" value="1234">
+    <div class="row" style="margin-top:16px"><button class="btn grow" data-act="close">বাতিল</button><button class="btn primary grow" data-act="saveU">যোগ করুন</button></div>`}
+  return `<div class="ov" data-act="ovclose"><div class="sheet" role="dialog" aria-modal="true">${body}</div></div>`;
+}
+const confirmSheet=(title,msg,yes,id,label,danger=true)=>{ui.sheet={t:'confirm',title,msg,yes,id,label,danger};render()};
+const val=id=>{const e=$('#'+id);return e?e.value:''};
+
+/* ---------- actions ---------- */
+function act(a,d,el){
+  switch(a){
+  case 'go':go(d.v);break;
+  case 'close':ui.sheet=null;render();break;
+  case 'ovclose':if(el===document.querySelector('.ov')){ui.sheet=null;render()}break;
+  case 'login':{const u=U(val('lu'));ui.loginUid=val('lu');if(!u)return;if(val('lp')!==u.pin){toast('PIN ভুল');return}
+    db.session=u.id;persist();ui.view=u.role==='student'?'exams':'home';render();break}
+  case 'logout':db.session=null;persist();ui.view='login';render();break;
+  /* questions */
+  case 'newQ':ui.sheet={t:'q'};render();break;
+  case 'editQ':ui.sheet={t:'q',q:Q(d.id)};render();break;
+  case 'saveQ':{const text=val('f_tx').trim(),opts=[0,1,2,3].map(i=>val('f_o'+i).trim());
+    if(!text||opts.some(o=>!o)){toast('প্রশ্ন ও চারটি অপশনই লিখুন');return}
+    const rec={text,opts,ans:+val('f_an'),chapterId:val('f_ch')};
+    if(d.id)Object.assign(Q(d.id),rec);else db.questions.push({id:'q'+uid(),...rec});
+    persist();ui.sheet=null;render();toast('প্রশ্ন সংরক্ষিত');break}
+  case 'askDelQ':if(db.exams.some(e=>e.qids.includes(d.id))){toast('এই প্রশ্ন কোনো পরীক্ষায় ব্যবহৃত, মোছা যাবে না');return}
+    confirmSheet('প্রশ্ন মুছবেন?',Q(d.id).text,'delQ',d.id,'মুছুন');break;
+  case 'delQ':db.questions=db.questions.filter(q=>q.id!==d.id);persist();ui.sheet=null;render();toast('মুছে ফেলা হয়েছে');break;
+  /* exams */
+  case 'newE':{const s=db.subjects[0];ui.sheet={t:'exam',d:{title:'',subjectId:s?.id,chapterIds:db.chapters.filter(c=>c.subjectId===s?.id).map(c=>c.id),count:10,duration:10,neg:0.25,live:true}};render();break}
+  case 'saveE':{const d=ui.sheet.d;syncExam();
+    const pool=db.questions.filter(q=>d.chapterIds.includes(q.chapterId));
+    if(!d.title.trim()){toast('শিরোনাম লিখুন');return}
+    if(!pool.length){toast('অন্তত একটি অধ্যায় বেছে নিন যেখানে প্রশ্ন আছে');return}
+    const n=Math.min(Math.max(1,d.count|0),pool.length);
+    const qids=pool.slice().sort(()=>Math.random()-.5).slice(0,n).map(q=>q.id);
+    db.exams.push({id:'e'+uid(),title:d.title.trim(),classId:SU(d.subjectId).classId,subjectId:d.subjectId,qids,duration:Math.max(1,d.duration|0),neg:d.neg,status:d.live?'live':'draft',createdAt:Date.now()});
+    persist();ui.sheet=null;render();toast(`${n}টি প্রশ্নসহ পরীক্ষা তৈরি হয়েছে`);break}
+  case 'setSt':E(d.id).status=d.s;persist();render();toast('পরীক্ষা লাইভ হয়েছে');break;
+  case 'askEnd':confirmSheet('পরীক্ষা শেষ করবেন?','যারা এখনও পরীক্ষা দিচ্ছে তাদের উত্তরপত্র সাথে সাথে জমা হয়ে যাবে।','endE',d.id,'শেষ করুন');break;
+  case 'endE':E(d.id).status='ended';sweep();persist();ui.sheet=null;render();toast('পরীক্ষা শেষ');break;
+  case 'askDelE':confirmSheet('পরীক্ষা মুছবেন?','এই পরীক্ষার সব উত্তরপত্রও মুছে যাবে।','delE',d.id,'মুছুন');break;
+  case 'delE':db.exams=db.exams.filter(e=>e.id!==d.id);db.attempts=db.attempts.filter(a=>a.examId!==d.id);persist();ui.sheet=null;render();break;
+  case 'viewRes':go('results',{resExam:d.id});break;
+  /* structure */
+  case 'addS':ui.sheet={t:'struct',k:d.k||'subject',p:d.p};render();break;
+  case 'saveS':{const nm=val('f_nm').trim();if(!nm){toast('নাম লিখুন');return}
+    if(d.k==='class')db.classes.push({id:'c'+uid(),name:nm});
+    if(d.k==='subject')db.subjects.push({id:'s'+uid(),classId:d.p,name:nm});
+    if(d.k==='chapter')db.chapters.push({id:'ch'+uid(),subjectId:d.p,name:nm});
+    persist();ui.sheet=null;render();break}
+  case 'delS':{const k=d.k,id=d.id;
+    const used=k==='class'?db.subjects.some(s=>s.classId===id)||db.users.some(u=>u.classId===id):k==='subject'?db.chapters.some(c=>c.subjectId===id)||db.exams.some(e=>e.subjectId===id):db.questions.some(q=>q.chapterId===id);
+    if(used){toast('ভেতরে ডাটা আছে, আগে সেগুলো সরান');return}
+    if(k==='class')db.classes=db.classes.filter(x=>x.id!==id);if(k==='subject')db.subjects=db.subjects.filter(x=>x.id!==id);if(k==='chapter')db.chapters=db.chapters.filter(x=>x.id!==id);
+    persist();render();break}
+  /* users */
+  case 'newU':ui.sheet={t:'user',role:'student'};render();break;
+  case 'saveU':{const nm=val('f_un').trim(),pin=val('f_up').trim(),role=val('f_ur');
+    if(!nm||pin.length<4){toast('নাম ও কমপক্ষে ৪ সংখ্যার PIN দিন');return}
+    const u={id:'u'+uid(),name:nm,role,pin};if(role==='student')u.classId=val('f_uc');
+    db.users.push(u);persist();ui.sheet=null;render();toast('যোগ করা হয়েছে');break}
+  case 'askDelU':confirmSheet('ব্যবহারকারী মুছবেন?',U(d.id).name,'delU',d.id,'মুছুন');break;
+  case 'delU':db.users=db.users.filter(u=>u.id!==d.id);db.attempts=db.attempts.filter(a=>a.studentId!==d.id);persist();ui.sheet=null;render();break;
+  /* backup */
+  case 'copyBk':{const txt=JSON.stringify(db);(navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('কপি হয়েছে')).catch(()=>{const r=document.createRange();r.selectNodeContents($('#bk'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('টেক্সট সিলেক্ট হয়েছে, কপি করুন')});break}
+  case 'imp':{try{const d=JSON.parse(val('imp'));if(!d||d.v!==1||!Array.isArray(d.users)||!Array.isArray(d.questions))throw 0;d.session=db.session;db=d;persist();toast('ইমপোর্ট সম্পন্ন');go('more')}catch(e){toast('টেক্সটটি সঠিক ব্যাকআপ নয়')}break}
+  case 'askReset':confirmSheet('রিসেট করবেন?','সব ডাটা মুছে ডেমো ডাটা ফিরে আসবে। এটি ফেরানো যাবে না।','reset','','রিসেট');break;
+  case 'reset':{const s=db.session;seed();db.session=s;persist();ui.sheet=null;go('more');toast('ডেমো ডাটা ফিরে এসেছে');break}
+  /* student */
+  case 'start':{const e=E(d.id);if(e.status!=='live'||myAtt(e.id))return;const a={id:'a'+uid(),examId:e.id,studentId:db.session,answers:{},startedAt:Date.now(),submittedAt:null};db.attempts.push(a);persist();ui.rid=a.id;ui.cur=0;go('run');break}
+  case 'resume':{ui.rid=myAtt(d.id).id;ui.cur=0;go('run');break}
+  case 'pick':{const a=curAtt(),ex=E(a.examId),qs=ex.qids.filter(id=>Q(id));a.answers[qs[ui.cur]]=+d.j;persist();render();break}
+  case 'clr':{const a=curAtt(),ex=E(a.examId),qs=ex.qids.filter(id=>Q(id));delete a.answers[qs[ui.cur]];persist();render();break}
+  case 'prev':ui.cur=Math.max(0,ui.cur-1);render();break;
+  case 'next':ui.cur++;render();break;
+  case 'jump':ui.cur=+d.i;render();break;
+  case 'askSubmit':{const a=curAtt(),ex=E(a.examId),left=ex.qids.filter(id=>Q(id)&&a.answers[id]==null).length;
+    confirmSheet('উত্তরপত্র জমা দেবেন?',left?`${left}টি প্রশ্নের উত্তর দেওয়া হয়নি।`:'সব প্রশ্নের উত্তর দেওয়া হয়েছে।','submit','','জমা দিন',false);break}
+  case 'submit':{const a=curAtt();finalize(a);persist();ui.sheet=null;go('result');break}
+  case 'openRes':go('result',{rid:d.id});break;
+  }
+}
+function syncExam(){const d=ui.sheet&&ui.sheet.d;if(!d)return;
+  d.title=val('f_ti');d.count=+val('f_n')||1;d.duration=+val('f_du')||1;d.neg=+val('f_ng');d.live=$('#f_lv')?$('#f_lv').checked:d.live;
+  d.chapterIds=db.chapters.filter(c=>c.subjectId===d.subjectId&&$('#c_'+c.id)&&$('#c_'+c.id).checked).map(c=>c.id)}
+
+document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t)return;if(t.dataset.act==='ovclose'&&e.target!==t)return;act(t.dataset.act,t.dataset,t)});
+document.addEventListener('change',e=>{const t=e.target.closest('[data-chg]');if(!t)return;
+  switch(t.dataset.chg){
+  case 'qf':ui.qf=t.value;render();break;
+  case 'resExam':ui.resExam=t.value;render();break;
+  case 'lbExam':ui.lbExam=t.value;render();break;
+  case 'exSubj':{syncExam();const d=ui.sheet.d;d.subjectId=t.value;d.chapterIds=db.chapters.filter(c=>c.subjectId===d.subjectId).map(c=>c.id);render();break}
+  case 'exCh':syncExam();render();break;
+  case 'uRole':ui.sheet.role=t.value;{const n=val('f_un');render();$('#f_un').value=n}break;
+  }});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lp')act('login',{})});
+
+db=load()||seed();
+persist();
+ui.view=db.session&&me()?(me().role==='student'?'exams':'home'):'login';
+render();
+</script>
+
+</html>
